@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3233/3233829.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3233/3233829.png">
+    <title>RM SUPREME</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&display=swap');
+        :root { --app-color: #10b981; --app-glow: rgba(16, 185, 129, 0.4); }
+        * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; outline: none !important; }
+        body { background-color: #020617; font-family: 'Chakra Petch', sans-serif; margin: 0; min-height: 100vh; color: white; overflow-x: hidden; }
+        .text-theme { color: var(--app-color) !important; }
+        .bg-theme { background-color: var(--app-color) !important; color: #000 !important; }
+        .border-theme { border-color: var(--app-color) !important; }
+        .glass-ui { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); }
+        .circle-main { width: 230px; height: 230px; border-radius: 50%; border: 2px solid var(--app-color); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; box-shadow: 0 0 60px var(--app-glow); transition: all 0.3s ease; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); padding: 20px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .calendar-day { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.05); font-size: 11px; cursor: pointer !important; position: relative; z-index: 10; pointer-events: auto !important; }
+        .day-green { border: 1px solid var(--app-color); color: var(--app-color); background: rgba(16, 185, 129, 0.1); }
+        .day-red { border: 1px solid #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .proton { position: absolute; width: 3px; height: 3px; background: var(--app-color); border-radius: 50%; animation: moveUp 10s infinite linear; opacity: 0.3; pointer-events: none; }
+        @keyframes moveUp { from { transform: translateY(110vh); } to { transform: translateY(-10vh); } }
+        /* Ajuste Fino para Paisagem */
+        @media (orientation: landscape) { .main-content { flex-direction: row; gap: 40px; justify-content: center; } }
+    </style>
+</head>
+<body onmousedown="resetTimer()" ontouchstart="resetTimer()" onclick="resetTimer()">
+    <div id="protons-container" class="fixed inset-0 z-0"></div>
+
+    <div id="login-overlay" class="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-[#020617]">
+        <div class="glass-ui p-8 rounded-[2.5rem] w-full max-w-xs text-center border-white/10 border shadow-2xl">
+            <h1 class="text-3xl font-bold mb-8 uppercase text-emerald-500">RM Login</h1>
+            <input type="text" id="user" autocomplete="off" class="w-full bg-slate-900 border border-slate-700 p-4 rounded-xl mb-4 text-white uppercase" placeholder="USUÁRIO">
+            <input type="password" id="pass" class="w-full bg-slate-900 border border-slate-700 p-4 rounded-xl mb-8 text-white" placeholder="SENHA">
+            <button onclick="login()" class="w-full bg-emerald-500 p-4 rounded-xl font-bold uppercase text-black active:scale-95">Acessar Sistema</button>
+            <p id="msg" class="text-red-500 text-[10px] mt-4 font-bold h-4 uppercase"></p>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden min-h-screen flex flex-col p-4 relative z-50">
+        <div class="flex justify-between items-center mb-6 pt-2">
+            <div class="flex gap-4">
+                <button onclick="abrirConfig()" class="glass-ui w-12 h-12 rounded-full flex items-center justify-center text-theme border-theme shadow-lg active:scale-90"><i class="fas fa-cog text-xl"></i></button>
+                <button onclick="abrirCalendario()" class="glass-ui w-12 h-12 rounded-full flex items-center justify-center text-theme border-theme shadow-lg active:scale-90"><i class="fas fa-calendar-alt text-xl"></i></button>
+            </div>
+            <div id="app-brand-name" class="text-[10px] font-bold opacity-40 uppercase tracking-widest text-white">RM SUPREME</div>
+            <button onclick="logout()" class="text-red-500 font-bold text-[10px] uppercase active:scale-95">Sair</button>
+        </div>
+
+        <div class="main-content flex flex-col items-center flex-1 justify-evenly">
+            <div class="relative flex flex-col items-center">
+                <div class="circle-main border-theme">
+                    <p class="text-[9px] uppercase text-theme mb-2 font-bold tracking-widest">Produção Hoje</p>
+                    <h3 id="count-display" class="text-7xl font-bold text-white">0</h3>
+                </div>
+                <div class="absolute -bottom-6"><button onclick="abrirAjusteManual()" class="bg-slate-900 border border-theme px-6 py-2 rounded-full text-[10px] font-bold uppercase shadow-lg text-white active:scale-95">Ajustar</button></div>
+            </div>
+
+            <div class="w-full max-w-sm space-y-4">
+                <div class="glass-ui p-6 rounded-[2.5rem] text-center relative border-white/5">
+                    <button onclick="togglePrivacy()" class="absolute top-4 right-6 text-theme/60 text-xl p-2 z-[100] active:scale-90"><i id="privacy-icon" class="fas fa-eye"></i></button>
+                    <p class="text-[10px] uppercase text-theme font-bold mb-1 opacity-70">Faturamento Estimado</p>
+                    <h2 id="valor-display" class="text-4xl font-bold text-white">R$ 0,00</h2>
+                    <p id="meta-valor-display" class="text-[11px] text-gray-500 mt-1 font-bold">Meta: R$ 0,00</p>
+                </div>
+                <div class="flex gap-4 h-24 pb-4">
+                    <button onclick="change(-1)" class="flex-1 glass-ui rounded-[1.5rem] text-4xl text-gray-700 active:scale-95"><i class="fas fa-minus"></i></button>
+                    <button onclick="change(1)" class="flex-1 bg-theme rounded-[1.5rem] text-4xl text-black shadow-lg shadow-theme/20 active:scale-95"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-calendario" class="modal-overlay">
+        <div class="glass-ui p-6 rounded-[2.5rem] w-full max-w-sm text-center relative">
+            <button onclick="fecharModais()" class="absolute top-4 right-6 text-gray-500 text-xl active:scale-90"><i class="fas fa-times"></i></button>
+            <h2 class="text-theme font-bold mb-4 uppercase">Histórico</h2>
+            <div id="calendar-container" class="calendar-grid"></div>
+            <div class="mt-6 pt-4 border-t border-white/5 text-theme font-bold text-lg" id="cal-fatura-mes">R$ 0,00</div>
+        </div>
+    </div>
+
+    <div id="modal-ajuste-manual" class="modal-overlay">
+        <div class="glass-ui p-8 rounded-3xl w-full max-w-xs text-center">
+            <h3 class="font-bold uppercase text-white mb-2">Ajuste Direto</h3>
+            <p id="ajuste-data-label" class="text-[10px] text-theme font-bold mb-6"></p>
+            <input type="number" id="input-ajuste-manual" class="w-full bg-slate-900 border border-theme p-4 rounded-xl text-3xl text-center text-white mb-6 outline-none">
+            <button onclick="confirmarAjusteManual()" class="w-full bg-theme p-4 rounded-xl text-black font-bold uppercase active:scale-95">Confirmar</button>
+            <button onclick="fecharModais()" class="mt-4 text-gray-500 text-[10px] font-bold uppercase">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="modal-config" class="modal-overlay">
+        <div class="glass-ui p-8 rounded-[2.5rem] w-full max-w-xs text-center">
+            <h3 class="text-theme font-bold mb-6 uppercase">Configurações</h3>
+            <div class="mb-4 text-left"><label class="text-[9px] text-gray-500 font-bold uppercase ml-2">Título</label><input type="text" id="cfg-brand" class="w-full bg-slate-900 p-4 rounded-xl text-white border border-white/10 outline-none"></div>
+            <div class="flex gap-3 mb-4">
+                <div class="flex-1 text-left"><label class="text-[9px] text-gray-500 font-bold uppercase ml-2">Preço R$</label><input type="number" id="cfg-preco" class="w-full bg-slate-900 p-4 rounded-xl text-white text-center border border-white/10 outline-none"></div>
+                <div class="flex-1 text-left"><label class="text-[9px] text-gray-500 font-bold uppercase ml-2">Meta</label><input type="number" id="cfg-meta" class="w-full bg-slate-900 p-4 rounded-xl text-white text-center border border-white/10 outline-none"></div>
+            </div>
+            <div class="mb-6 text-left"><label class="text-[9px] text-gray-500 font-bold uppercase ml-2">Cor Tema</label><input type="color" id="cfg-cor" oninput="setTheme(this.value)" class="w-full h-12 bg-transparent border-none cursor-pointer"></div>
+            <button onclick="salvarConfig()" class="w-full bg-theme p-4 rounded-xl text-black font-bold uppercase active:scale-95">Salvar Tudo</button>
+        </div>
+    </div>
+
+    <script>
+        const ENDERECO = 'https://ramcjxqpsiyqeatuunig.supabase.co', CHAVE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhbWNqeHFwc2l5cWVhdHV1bmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODkyMDgsImV4cCI6MjA4MzM2NTIwOH0.kaskIarBgrF4iQS5CfSLhkxBPGq3F3h05SrzrHSHYZE';
+        const supabaseRM = supabase.createClient(ENDERECO, CHAVE);
+        let currentUser = localStorage.getItem("rm_u"), count = 0, historico = [], config = { preco: 14.0, meta: 16, theme: '#10b981', brandName: 'RM SUPREME' }, isPrivacyOn = false, dataEditando = "";
+        
+        // AUTO-LOGOUT 5 MIN (Reinicia a cada clique)
+        let timer;
+        function resetTimer() { clearTimeout(timer); if(currentUser) timer = setTimeout(logout, 5 * 60 * 1000); }
+
+        function getFID() { return btoa(navigator.userAgent.substring(10, 35) + screen.width).substring(0, 12).toUpperCase(); }
+        function setTheme(c) { document.documentElement.style.setProperty('--app-color', c); document.documentElement.style.setProperty('--app-glow', c + '66'); config.theme = c; }
+        function fecharModais() { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
+        function togglePrivacy() { isPrivacyOn = !isPrivacyOn; updateUI(); }
+
+        async function login() {
+            const u = document.getElementById('user').value.toLowerCase().trim(), p = document.getElementById('pass').value, fid = getFID(), msg = document.getElementById('msg');
+            const { data } = await supabaseRM.from('usuarios').select('*').eq('username', u).eq('password', p).single();
+            if (data) {
+                const id1 = data.id_do_dispositivo, id2 = data.device_id_2;
+                if ((!id1 || id1 === "NULL") && (!id2 || id2 === "NULL")) await supabaseRM.from('usuarios').update({ id_do_dispositivo: fid }).eq('username', u);
+                else if (id1 && id1 !== fid && (!id2 || id2 === "NULL")) await supabaseRM.from('usuarios').update({ device_id_2: fid }).eq('username', u);
+                else if (fid !== id1 && fid !== id2) { msg.innerText = "LIMITE ATINGIDO!"; return; }
+                localStorage.setItem("rm_u", u); location.reload();
+            } else msg.innerText = "LOGIN INVÁLIDO";
+        }
+
+        // REALTIME (INSTANTÂNEO)
+        function setupRealtime() {
+            supabaseRM.channel('custom-all-channel')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'usuarios', filter: `username=eq.${currentUser}` }, (payload) => {
+                const data = payload.new;
+                historico = data.historico_json || [];
+                const regHoje = historico.find(x => x.data === new Date().toLocaleDateString('pt-BR'));
+                count = regHoje ? regHoje.qtd : 0;
+                if(data.config_json) { config = data.config_json; setTheme(config.theme); document.getElementById('app-brand-name').innerText = config.brandName; }
+                updateUI();
+            }).subscribe();
+        }
+
+        async function initialLoad() {
+            if (!currentUser) return;
+            const { data } = await supabaseRM.from('usuarios').select('*').eq('username', currentUser).single();
+            if (data) {
+                historico = data.historico_json || [];
+                const regHoje = historico.find(x => x.data === new Date().toLocaleDateString('pt-BR'));
+                count = regHoje ? regHoje.qtd : 0;
+                if(data.config_json) { config = data.config_json; setTheme(config.theme); document.getElementById('app-brand-name').innerText = config.brandName; }
+                updateUI();
+                setupRealtime();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('count-display').innerText = count;
+            const total = count * config.preco;
+            document.getElementById('valor-display').innerText = isPrivacyOn ? "••••••" : total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            document.getElementById('privacy-icon').className = isPrivacyOn ? "fas fa-eye-slash" : "fas fa-eye";
+            document.getElementById('meta-valor-display').innerText = `Meta: ${(config.meta * config.preco).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`;
+        }
+
+        async function change(v) { count = Math.max(0, count + v); updateUI(); await salvarNoBanco(new Date().toLocaleDateString('pt-BR'), count); }
+        async function salvarNoBanco(d, q) {
+            const idx = historico.findIndex(x => x.data === d);
+            const item = { data: d, qtd: q, valor: q * config.preco, meta: config.meta };
+            if (idx >= 0) historico[idx] = item; else historico.push(item);
+            await supabaseRM.from('usuarios').update({ contagem_atual: (d === new Date().toLocaleDateString('pt-BR')) ? q : count, historico_json: historico }).eq('username', currentUser);
+        }
+
+        function abrirConfig() { document.getElementById('modal-config').style.display = 'flex'; document.getElementById('cfg-preco').value = config.preco; document.getElementById('cfg-meta').value = config.meta; document.getElementById('cfg-cor').value = config.theme; document.getElementById('cfg-brand').value = config.brandName; }
+        async function salvarConfig() { config.preco = parseFloat(document.getElementById('cfg-preco').value); config.meta = parseInt(document.getElementById('cfg-meta').value); config.brandName = document.getElementById('cfg-brand').value; await supabaseRM.from('usuarios').update({ config_json: config }).eq('username', currentUser); fecharModais(); }
+        
+        function abrirCalendario() {
+            document.getElementById('modal-calendario').style.display = 'flex';
+            const cont = document.getElementById('calendar-container'); cont.innerHTML = '';
+            const h = new Date(), d = new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate();
+            let totalM = 0, map = {}; historico.forEach(x => map[x.data] = x);
+            for(let j=1; j<=d; j++) {
+                const dt = `${String(j).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()}`;
+                const it = map[dt], div = document.createElement('div');
+                div.className = `calendar-day ${it ? (it.qtd >= it.meta ? 'day-green' : 'day-red') : ''}`;
+                div.innerHTML = `<span>${j}</span>${it ? `<span class="text-[8px] mt-1 font-bold">${it.qtd}</span>` : ''}`;
+                div.onclick = (e) => { e.stopPropagation(); abrirAjusteManual(dt, it ? it.qtd : 0); };
+                cont.appendChild(div); if(it) totalM += it.valor;
+            }
+            document.getElementById('cal-fatura-mes').innerText = totalM.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        }
+        function abrirAjusteManual(dStr = null, vP = null) { dataEditando = dStr || new Date().toLocaleDateString('pt-BR'); document.getElementById('ajuste-data-label').innerText = dataEditando; document.getElementById('input-ajuste-manual').value = vP !== null ? vP : count; document.getElementById('modal-ajuste-manual').style.display = 'flex'; }
+        async function confirmarAjusteManual() { const nV = parseInt(document.getElementById('input-ajuste-manual').value) || 0; if (dataEditando === new Date().toLocaleDateString('pt-BR')) count = nV; await salvarNoBanco(dataEditando, nV); fecharModais(); updateUI(); if (dataEditando !== new Date().toLocaleDateString('pt-BR')) abrirCalendario(); }
+        function logout() { localStorage.clear(); location.reload(); }
+        
+        window.onload = () => {
+            if (currentUser) { 
+                document.getElementById('login-overlay').style.display = 'none'; 
+                document.getElementById('app-content').classList.remove('hidden'); 
+                initialLoad(); 
+                setInterval(initialLoad, 10000); // Backup de segurança a cada 10s
+                resetTimer(); 
+            }
+            const container = document.getElementById('protons-container');
+            for(let i=0; i<30; i++) {
+                const p = document.createElement('div'); p.className = 'proton';
+                p.style.left = Math.random() * 100 + 'vw'; p.style.animationDelay = Math.random() * 10 + 's';
+                container.appendChild(p);
+            }
+        };
+    </script>
+</body>
+</html>
