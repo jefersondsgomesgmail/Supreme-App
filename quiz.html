@@ -9,55 +9,15 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        
         :root { --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #0b0f1a; }
-        
-        body { 
-            background: var(--bg); 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            color: white; 
-            overflow: hidden;
-            background-image: radial-gradient(circle at top right, #1e293b, transparent), radial-gradient(circle at bottom left, #0f172a, transparent);
-        }
-
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 28px;
-        }
-
-        .option-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .option-btn:active { transform: scale(0.96); }
-
-        .option-btn.correct { 
-            background: rgba(16, 185, 129, 0.2) !important; 
-            border-color: var(--success) !important;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-        }
-
-        .option-btn.wrong { 
-            background: rgba(239, 68, 68, 0.2) !important; 
-            border-color: var(--danger) !important;
-            animation: shake 0.4s;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-        }
-
+        body { background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; color: white; overflow: hidden; background-image: radial-gradient(circle at top right, #1e293b, transparent), radial-gradient(circle at bottom left, #0f172a, transparent); }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px; }
+        .option-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease; cursor: pointer; }
+        .option-btn.correct { background: rgba(16, 185, 129, 0.2) !important; border-color: var(--success) !important; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+        .option-btn.wrong { background: rgba(239, 68, 68, 0.2) !important; border-color: var(--danger) !important; }
         .progress-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
         .progress-fill { height: 100%; transition: width 0.5s ease-out; }
-
-        /* Esconder Scrollbar */
+        #filter-overlay { backdrop-filter: blur(12px); background: rgba(11, 15, 26, 0.9); z-index: 100; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -71,11 +31,11 @@
             </div>
             <div class="flex gap-4">
                 <div class="text-right">
-                    <p class="text-[9px] uppercase font-bold text-slate-500">Aproveitamento</p>
+                    <p class="text-[9px] uppercase font-bold text-slate-500">Acertos</p>
                     <p class="text-xl font-800 text-blue-400" id="perc-label">0%</p>
                 </div>
-                <button onclick="toggleFiltros()" class="w-12 h-12 glass-card flex items-center justify-center border-white/20">
-                    <i class="fas fa-bars-staggered text-blue-400 text-sm"></i>
+                <button onclick="toggleFiltros()" class="w-12 h-12 glass-card flex items-center justify-center border-white/20 active:scale-90 transition">
+                    <i class="fas fa-sliders-h text-blue-400 text-sm"></i>
                 </button>
             </div>
         </div>
@@ -85,26 +45,23 @@
     </div>
 
     <div class="flex-1 overflow-y-auto px-6 no-scrollbar">
-        <div class="glass-card p-6 mb-6 mt-2 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-3 opacity-10">
-                <i class="fas fa-quote-right text-4xl"></i>
-            </div>
-            <p id="q-text" class="text-lg font-medium leading-snug text-slate-100 mb-4">
-                Estamos preparando sua jornada de conhecimento...
-            </p>
-            <div id="q-img-box" class="hidden">
-                <img id="q-img" src="" class="w-full rounded-2xl border border-white/10 mb-4 shadow-2xl">
-            </div>
+        <div class="glass-card p-6 mb-6 mt-2 relative">
+            <p id="q-text" class="text-lg font-medium leading-snug text-slate-100 mb-4 italic">Buscando questão...</p>
+            <div id="q-img-box" class="hidden"><img id="q-img" src="" class="w-full rounded-2xl border border-white/10 mb-4"></div>
         </div>
-
-        <div id="options-box" class="space-y-3 mb-28">
-            </div>
+        <div id="options-box" class="space-y-3 mb-28"></div>
     </div>
 
-    <div id="action-bar" class="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-bg via-bg to-transparent hidden">
-        <button onclick="nextQuestion()" class="w-full bg-blue-600 hover:bg-blue-500 py-5 rounded-[24px] font-800 text-lg shadow-2xl shadow-blue-500/20 transition-all flex items-center justify-center gap-3">
-            PRÓXIMA QUESTÃO <i class="fas fa-chevron-right text-sm"></i>
-        </button>
+    <div id="filter-overlay" class="fixed inset-0 hidden flex items-center justify-center p-6">
+        <div class="glass-card w-full max-w-sm p-8 border-blue-500/30">
+            <h2 class="text-xl font-bold mb-6 text-center">Ajustar Matérias</h2>
+            <div class="space-y-3 mb-8" id="materias-list"></div>
+            <button onclick="salvarEFiltar()" class="w-full bg-blue-600 py-4 rounded-2xl font-800 shadow-xl active:scale-95 transition">APLICAR</button>
+        </div>
+    </div>
+
+    <div id="action-bar" class="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-bg hidden">
+        <button onclick="nextQuestion()" class="w-full bg-blue-600 py-5 rounded-[24px] font-800 text-lg shadow-2xl transition-all">PRÓXIMA QUESTÃO</button>
     </div>
 
     <script>
@@ -115,12 +72,30 @@
         let acertos = 0, erros = 0, qAtual = null;
         let filtros = JSON.parse(localStorage.getItem('m_enem')) || ["Ciências da Natureza", "Ciências Humanas", "Linguagens e Códigos", "Matemática", "Geral"];
 
+        function toggleFiltros() { document.getElementById('filter-overlay').classList.toggle('hidden'); renderFiltros(); }
+
+        function renderFiltros() {
+            const list = document.getElementById('materias-list');
+            const mats = ["Ciências da Natureza", "Ciências Humanas", "Linguagens e Códigos", "Matemática", "Geral"];
+            list.innerHTML = mats.map(m => `
+                <label class="flex items-center justify-between p-4 glass-card border-white/5 cursor-pointer">
+                    <span class="text-sm font-semibold">${m}</span>
+                    <input type="checkbox" value="${m}" ${filtros.includes(m) ? 'checked' : ''} class="w-5 h-5 accent-blue-500">
+                </label>`).join('');
+        }
+
+        function salvarEFiltar() {
+            const checks = document.querySelectorAll('#materias-list input:checked');
+            filtros = Array.from(checks).map(c => c.value);
+            localStorage.setItem('m_enem', JSON.stringify(filtros));
+            toggleFiltros();
+            nextQuestion();
+        }
+
         async function nextQuestion() {
             document.getElementById('action-bar').classList.add('hidden');
-            document.getElementById('options-box').innerHTML = '<div class="py-10 text-center opacity-50 italic">Sorteando...</div>';
-            
+            document.getElementById('options-box').innerHTML = '<div class="py-10 text-center opacity-50">Sorteando...</div>';
             const { data } = await sb.from('questoes').select('*').in('materia', filtros);
-            
             if(data && data.length > 0) {
                 qAtual = data[Math.floor(Math.random() * data.length)];
                 render(qAtual);
@@ -130,11 +105,8 @@
         function render(q) {
             document.getElementById('q-area').innerText = `${q.materia} • ${q.ano}`;
             document.getElementById('q-text').innerText = q.enunciado;
-            
             const imgBox = document.getElementById('q-img-box'), img = document.getElementById('q-img');
-            if(q.img_url) { img.src = q.img_url; imgBox.classList.remove('hidden'); } 
-            else { imgBox.classList.add('hidden'); }
-
+            if(q.img_url) { img.src = q.img_url; imgBox.classList.remove('hidden'); } else { imgBox.classList.add('hidden'); }
             const box = document.getElementById('options-box');
             box.innerHTML = '';
             ['a','b','c','d','e'].forEach(l => {
@@ -151,25 +123,13 @@
             const gab = qAtual.gabarito.toUpperCase();
             const btns = document.querySelectorAll('.option-btn');
             btns.forEach(b => b.onclick = null);
-
-            if(escolha === gab) {
-                el.classList.add('correct');
-                acertos++;
-            } else {
-                el.classList.add('wrong');
-                erros++;
-                btns.forEach(b => { if(b.innerText.startsWith(gab)) b.classList.add('correct'); });
-            }
-            
-            updateScore();
-            document.getElementById('action-bar').classList.remove('hidden');
-        }
-
-        function updateScore() {
+            if(escolha === gab) { el.classList.add('correct'); acertos++; }
+            else { el.classList.add('wrong'); erros++; btns.forEach(b => { if(b.innerText.startsWith(gab)) b.classList.add('correct'); }); }
             const total = acertos + erros;
             const p = Math.round((acertos / total) * 100);
             document.getElementById('perc-label').innerText = p + "%";
             document.getElementById('perc-bar').style.width = p + "%";
+            document.getElementById('action-bar').classList.remove('hidden');
         }
 
         nextQuestion();
