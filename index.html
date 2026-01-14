@@ -186,6 +186,16 @@
         function abrirCalendario() {
             document.getElementById('modal-calendario').style.display = 'flex';
             const cont = document.getElementById('calendar-container'); cont.innerHTML = '';
+            
+            // INSERÇÃO DAS LETRAS STQ (Sem mexer na lógica)
+            const diasSemana = ['D','S','T','Q','Q','S','S'];
+            diasSemana.forEach(d => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'text-[9px] text-gray-500 font-bold mb-1 opacity-70';
+                dayHeader.innerText = d;
+                cont.appendChild(dayHeader);
+            });
+
             const h = new Date(), d = new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate();
             let totalM = 0, map = {}; historico.forEach(x => map[x.data] = x);
             for(let j=1; j<=d; j++) {
